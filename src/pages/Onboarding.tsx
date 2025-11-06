@@ -19,11 +19,11 @@ export default function Onboarding() {
   const navigate = useNavigate();
 
   const handleComplete = () => {
-    // Save onboarding data to localStorage
-    localStorage.setItem("futureminds_onboarded", "true");
-    localStorage.setItem("futureminds_age_group", selectedAge || "10-13");
-    localStorage.setItem("futureminds_avatar", selectedAvatar || "robot");
-    navigate("/home");
+    // Save onboarding data
+    const ageGroup = selectedAge || "10-13";
+    const avatarId = selectedAvatar || "robot";
+    
+    navigate("/auth");
   };
 
   return (

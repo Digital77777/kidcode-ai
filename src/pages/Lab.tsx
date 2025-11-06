@@ -99,7 +99,7 @@ export default function Lab() {
                 </p>
               </div>
 
-              <Link to={`/lab/${template.id}`}>
+              <Link to={`/lab/editor/${template.id}`}>
                 <Button
                   variant={template.locked ? "outline" : "playful"}
                   className="w-full"

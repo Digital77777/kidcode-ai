@@ -27,13 +27,13 @@ const Index = () => {
           <Button
             variant="playful"
             size="xl"
-            onClick={() => navigate("/onboarding")}
+            onClick={() => navigate("/auth")}
             className="group"
           >
             Get Started <Rocket className="ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>
-          <Button variant="outline" size="xl" onClick={() => navigate("/community")}>
-            See What's Possible <Sparkles className="ml-2" />
+          <Button variant="outline" size="xl" onClick={() => navigate("/auth")}>
+            Sign In <Sparkles className="ml-2" />
           </Button>
         </div>
 

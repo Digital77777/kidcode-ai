@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Award, Trash2 } from "lucide-react";
+import { Plus, Calendar, Award, Trash2, GraduationCap } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { GradingInterface } from "./GradingInterface";
 
 interface Class {
   id: string;
@@ -37,6 +38,8 @@ export function AssignmentWorkflows({ onUpdate }: AssignmentWorkflowsProps) {
   const [classes, setClasses] = useState<Class[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [isGradingOpen, setIsGradingOpen] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     title: "",
     description: "",
@@ -141,8 +144,28 @@ export function AssignmentWorkflows({ onUpdate }: AssignmentWorkflowsProps) {
     onUpdate?.();
   };
 
+  const handleGradeClick = (assignment: Assignment) => {
+    setSelectedAssignment(assignment);
+    setIsGradingOpen(true);
+  };
+
   return (
     <div className="space-y-4">
+      {selectedAssignment && (
+        <GradingInterface
+          assignment={selectedAssignment}
+          isOpen={isGradingOpen}
+          onClose={() => {
+            setIsGradingOpen(false);
+            setSelectedAssignment(null);
+          }}
+          onUpdate={() => {
+            loadAssignments();
+            onUpdate?.();
+          }}
+        />
+      )}
+      
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold">Assignment Workflows</h2>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -255,7 +278,7 @@ export function AssignmentWorkflows({ onUpdate }: AssignmentWorkflowsProps) {
                   <TableHead>Due Date</TableHead>
                   <TableHead>XP Reward</TableHead>
                   <TableHead>Submissions</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -281,14 +304,25 @@ export function AssignmentWorkflows({ onUpdate }: AssignmentWorkflowsProps) {
                     </TableCell>
                     <TableCell>{assignment.submissionCount} submissions</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteAssignment(assignment.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleGradeClick(assignment)}
+                          disabled={assignment.submissionCount === 0}
+                        >
+                          <GraduationCap className="mr-2 h-4 w-4" />
+                          Grade
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteAssignment(assignment.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

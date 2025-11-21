@@ -13,6 +13,7 @@ import Community from "./pages/Community";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import ParentDashboard from "./pages/ParentDashboard";
+import EducatorDashboard from "./pages/EducatorDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
           <Route path="/community" element={<Community />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/parent-dashboard" element={<ParentDashboard />} />
+          <Route path="/educator-dashboard" element={<EducatorDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

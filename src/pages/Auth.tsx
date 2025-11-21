@@ -38,11 +38,15 @@ export default function Auth() {
           .select("role")
           .eq("user_id", data.user?.id);
 
-        const isParentOrEducator = roles?.some(r => 
-          r.role === "parent" || r.role === "educator"
-        );
-
-        navigate(isParentOrEducator ? "/parent-dashboard" : "/home");
+        const role = roles?.[0]?.role;
+        
+        if (role === "parent") {
+          navigate("/parent-dashboard");
+        } else if (role === "educator") {
+          navigate("/educator-dashboard");
+        } else {
+          navigate("/home");
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -70,7 +74,13 @@ export default function Auth() {
             description: "Welcome to FutureMinds!",
           });
 
-          navigate(userType === "parent" || userType === "educator" ? "/parent-dashboard" : "/onboarding");
+          if (userType === "parent") {
+            navigate("/parent-dashboard");
+          } else if (userType === "educator") {
+            navigate("/educator-dashboard");
+          } else {
+            navigate("/onboarding");
+          }
         }
       }
     } catch (error: any) {

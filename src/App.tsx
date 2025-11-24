@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import ParentDashboard from "./pages/ParentDashboard";
 import EducatorDashboard from "./pages/EducatorDashboard";
+import StudentDashboard from "./pages/StudentDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/profile" element={<Profile />} />
           <Route path="/parent-dashboard" element={<ParentDashboard />} />
           <Route path="/educator-dashboard" element={<EducatorDashboard />} />
+          <Route path="/student-dashboard" element={<StudentDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

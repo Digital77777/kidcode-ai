@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle, Clock, User, Award, MessageSquare } from "lucide-react";
+import { CheckCircle, Clock, User, Award, MessageSquare, Download, File } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -24,6 +24,7 @@ interface Submission {
   submitted_at: string | null;
   graded_at: string | null;
   feedback: string | null;
+  file_urls: string[] | null;
   profiles: {
     display_name: string;
   };
@@ -93,6 +94,7 @@ export function GradingInterface({ assignment, isOpen, onClose, onUpdate }: Grad
     // Combine data
     const submissionsWithProfiles = submissionsData.map(submission => ({
       ...submission,
+      file_urls: Array.isArray(submission.file_urls) ? submission.file_urls as string[] : null,
       profiles: {
         display_name: profiles?.find(p => p.user_id === submission.student_id)?.display_name || "Unknown Student"
       }
@@ -280,6 +282,18 @@ export function GradingInterface({ assignment, isOpen, onClose, onUpdate }: Grad
             </Card>
 
             <div className="space-y-4">
+              {/* Submitted Files */}
+              {selectedSubmission.file_urls && selectedSubmission.file_urls.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Submitted Files</Label>
+                  <div className="space-y-2">
+                    {selectedSubmission.file_urls.map((fileUrl: string, index: number) => (
+                      <FileDownloadButton key={index} fileUrl={fileUrl} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="xp">XP to Award</Label>
                 <div className="flex items-center gap-2">
@@ -368,5 +382,51 @@ export function GradingInterface({ assignment, isOpen, onClose, onUpdate }: Grad
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FileDownloadButton({ fileUrl }: { fileUrl: string }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from("assignment-submissions")
+        .download(fileUrl);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileUrl.split('/').pop() || "download";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error("Failed to download file");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={handleDownload}
+      disabled={downloading}
+      className="w-full justify-start"
+    >
+      <File className="w-4 h-4 mr-2" />
+      <span className="truncate flex-1 text-left">
+        {fileUrl.split('/').pop()}
+      </span>
+      <Download className="w-4 h-4 ml-2" />
+    </Button>
   );
 }

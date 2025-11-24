@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { XPBar } from "@/components/XPBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, GraduationCap, TrendingUp, LogOut } from "lucide-react";
+import { BookOpen, GraduationCap, TrendingUp, LogOut, Upload, File, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudentDashboard() {
@@ -229,6 +229,9 @@ export default function StudentDashboard() {
 function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: () => void }) {
   const [submission, setSubmission] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadSubmission();
@@ -247,10 +250,110 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
         .maybeSingle();
 
       setSubmission(data);
+      if (data?.file_urls && Array.isArray(data.file_urls)) {
+        setUploadedFiles(data.file_urls as string[]);
+      }
     } catch (error) {
       console.error("Error loading submission:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Create submission if it doesn't exist
+      let submissionId = submission?.id;
+      if (!submission) {
+        const { data: newSubmission, error } = await supabase
+          .from("assignment_submissions")
+          .insert({
+            assignment_id: assignment.id,
+            student_id: user.id,
+            status: "in_progress",
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        submissionId = newSubmission.id;
+        setSubmission(newSubmission);
+      }
+
+      const newFileUrls: string[] = [];
+
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${submissionId}/${Date.now()}_${file.name}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("assignment-submissions")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        newFileUrls.push(fileName);
+      }
+
+      const allFileUrls = [...uploadedFiles, ...newFileUrls];
+      setUploadedFiles(allFileUrls);
+
+      // Update submission with file URLs
+      const { error: updateError } = await supabase
+        .from("assignment_submissions")
+        .update({ file_urls: allFileUrls })
+        .eq("id", submissionId);
+
+      if (updateError) throw updateError;
+
+      toast.success(`${files.length} file(s) uploaded successfully`);
+      loadSubmission();
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast.error("Failed to upload files");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveFile = async (fileUrl: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Delete from storage
+      const { error: deleteError } = await supabase.storage
+        .from("assignment-submissions")
+        .remove([fileUrl]);
+
+      if (deleteError) throw deleteError;
+
+      // Update submission
+      const newFileUrls = uploadedFiles.filter(url => url !== fileUrl);
+      setUploadedFiles(newFileUrls);
+
+      const { error: updateError } = await supabase
+        .from("assignment_submissions")
+        .update({ file_urls: newFileUrls })
+        .eq("id", submission.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("File removed");
+      loadSubmission();
+    } catch (error) {
+      console.error("Error removing file:", error);
+      toast.error("Failed to remove file");
     }
   };
 
@@ -329,6 +432,61 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
         {assignment.description && (
           <p className="text-sm text-muted-foreground">{assignment.description}</p>
         )}
+
+        {/* File Upload Section */}
+        {submission?.status !== "graded" && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Attachments</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Uploading..." : "Upload Files"}
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="*/*"
+              />
+            </div>
+
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-2">
+                {uploadedFiles.map((fileUrl, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                  >
+                    <div className="flex items-center gap-2">
+                      <File className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm truncate max-w-[200px]">
+                        {fileUrl.split('/').pop()}
+                      </span>
+                    </div>
+                    {submission?.status !== "graded" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveFile(fileUrl)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         
         {submission?.feedback && (
           <div className="p-4 bg-muted rounded-lg">
@@ -347,7 +505,7 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
             Graded
           </Button>
         ) : (
-          <Button onClick={handleSubmit} className="w-full">
+          <Button onClick={handleSubmit} className="w-full" disabled={uploadedFiles.length === 0 && !submission}>
             {submission?.status === "submitted" ? "Resubmit" : "Submit Assignment"}
           </Button>
         )}

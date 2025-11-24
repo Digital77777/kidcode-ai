@@ -76,6 +76,7 @@ export type Database = {
           assignment_id: string
           created_at: string
           feedback: string | null
+          file_urls: Json | null
           graded_at: string | null
           id: string
           status: string
@@ -87,6 +88,7 @@ export type Database = {
           assignment_id: string
           created_at?: string
           feedback?: string | null
+          file_urls?: Json | null
           graded_at?: string | null
           id?: string
           status?: string
@@ -98,6 +100,7 @@ export type Database = {
           assignment_id?: string
           created_at?: string
           feedback?: string | null
+          file_urls?: Json | null
           graded_at?: string | null
           id?: string
           status?: string

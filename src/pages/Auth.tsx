@@ -44,6 +44,8 @@ export default function Auth() {
           navigate("/parent-dashboard");
         } else if (role === "educator") {
           navigate("/educator-dashboard");
+        } else if (role === "student") {
+          navigate("/student-dashboard");
         } else {
           navigate("/home");
         }
@@ -78,6 +80,8 @@ export default function Auth() {
             navigate("/parent-dashboard");
           } else if (userType === "educator") {
             navigate("/educator-dashboard");
+          } else if (userType === "student") {
+            navigate("/student-dashboard");
           } else {
             navigate("/onboarding");
           }

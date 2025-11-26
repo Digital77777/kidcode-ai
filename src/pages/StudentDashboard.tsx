@@ -231,7 +231,9 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadSubmission();
@@ -260,8 +262,7 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+  const processFiles = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
@@ -290,7 +291,6 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
       const newFileUrls: string[] = [];
 
       for (const file of Array.from(files)) {
-        const fileExt = file.name.split('.').pop();
         const fileName = `${user.id}/${submissionId}/${Date.now()}_${file.name}`;
 
         const { error: uploadError } = await supabase.storage
@@ -323,6 +323,43 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      await processFiles(files);
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dropZoneRef.current && !dropZoneRef.current.contains(e.relatedTarget as Node)) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await processFiles(files);
     }
   };
 
@@ -435,19 +472,27 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
 
         {/* File Upload Section */}
         {submission?.status !== "graded" && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Attachments</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                {uploading ? "Uploading..." : "Upload Files"}
-              </Button>
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Attachments</p>
+            
+            {/* Drag & Drop Zone */}
+            <div
+              ref={dropZoneRef}
+              onDragEnter={handleDragEnter}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`
+                relative border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+                transition-all duration-200 ease-in-out
+                ${isDragging 
+                  ? "border-primary bg-primary/10 scale-[1.02]" 
+                  : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
+                }
+                ${uploading ? "pointer-events-none opacity-60" : ""}
+              `}
+            >
               <input
                 ref={fileInputRef}
                 type="file"
@@ -456,10 +501,27 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
                 className="hidden"
                 accept="*/*"
               />
+              
+              <div className="flex flex-col items-center gap-2">
+                <div className={`p-3 rounded-full transition-colors ${isDragging ? "bg-primary/20" : "bg-muted"}`}>
+                  <Upload className={`w-6 h-6 ${isDragging ? "text-primary" : "text-muted-foreground"}`} />
+                </div>
+                {uploading ? (
+                  <p className="text-sm text-muted-foreground">Uploading files...</p>
+                ) : isDragging ? (
+                  <p className="text-sm font-medium text-primary">Drop files here</p>
+                ) : (
+                  <>
+                    <p className="text-sm font-medium">Drag & drop files here</p>
+                    <p className="text-xs text-muted-foreground">or click to browse</p>
+                  </>
+                )}
+              </div>
             </div>
 
             {uploadedFiles.length > 0 && (
               <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{uploadedFiles.length} file(s) attached</p>
                 {uploadedFiles.map((fileUrl, index) => (
                   <div
                     key={index}
@@ -476,7 +538,10 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
                         type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemoveFile(fileUrl)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFile(fileUrl);
+                        }}
                       >
                         <X className="w-4 h-4" />
                       </Button>

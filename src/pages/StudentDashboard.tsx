@@ -5,7 +5,7 @@ import { XPBar } from "@/components/XPBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BookOpen, GraduationCap, TrendingUp, LogOut, Upload, File, X } from "lucide-react";
+import { BookOpen, GraduationCap, TrendingUp, LogOut, Upload, File, X, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StudentDashboard() {
@@ -522,32 +522,59 @@ function AssignmentCard({ assignment, onUpdate }: { assignment: any; onUpdate: (
             {uploadedFiles.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">{uploadedFiles.length} file(s) attached</p>
-                {uploadedFiles.map((fileUrl, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-2 bg-muted rounded-lg"
-                  >
-                    <div className="flex items-center gap-2">
-                      <File className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm truncate max-w-[200px]">
-                        {fileUrl.split('/').pop()}
-                      </span>
+                {uploadedFiles.map((fileUrl, index) => {
+                  const fileName = fileUrl.split('/').pop() || '';
+                  const isImage = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(fileName);
+                  const { data: publicUrlData } = supabase.storage
+                    .from("assignment-submissions")
+                    .getPublicUrl(fileUrl);
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-muted rounded-lg"
+                    >
+                      <div className="flex items-center gap-3">
+                        {isImage ? (
+                          <div className="relative w-10 h-10 rounded overflow-hidden bg-background flex-shrink-0">
+                            <img
+                              src={publicUrlData.publicUrl}
+                              alt={fileName}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                              }}
+                            />
+                            <div className="hidden absolute inset-0 flex items-center justify-center">
+                              <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-background flex items-center justify-center flex-shrink-0">
+                            <File className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="text-sm truncate max-w-[180px]">
+                          {fileName}
+                        </span>
+                      </div>
+                      {submission?.status !== "graded" && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveFile(fileUrl);
+                          }}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
-                    {submission?.status !== "graded" && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveFile(fileUrl);
-                        }}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
